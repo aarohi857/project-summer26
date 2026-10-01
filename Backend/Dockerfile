@@ -2,7 +2,7 @@ FROM ubuntu:22.04
 
 ENV DEBIAN_FRONTEND=noninteractive
 
-# Install dependencies including curl and build tools
+# Essential packages install karein
 RUN apt-get update && apt-get install -y \
     build-essential \
     g++ \
@@ -12,14 +12,17 @@ RUN apt-get update && apt-get install -y \
     libasio-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# Download Crow header file
-RUN curl -sSL https://github.com/CrowCpp/Crow/releases/download/v1.0%2B5/crow_all.h -o /usr/include/crow_all.h
+# Crow framework ko crow folder ke sath setup karein
+RUN mkdir -p /usr/include/crow \
+    && curl -sSL https://github.com/CrowCpp/Crow/releases/download/v1.0%2B5/crow_all.h -o /usr/include/crow_all.h \
+    && echo '#include "../crow_all.h"' > /usr/include/crow/json.h \
+    && echo '#include "../crow_all.h"' > /usr/include/crow.h
 
 WORKDIR /app
 
 COPY . .
 
-# Build application
+# Application compile karein
 RUN g++ -std=c++17 -O3 main.cpp TaskManager.cpp PriorityManager.cpp FileManager.cpp -o scheduler -lpthread
 
 EXPOSE 18080
