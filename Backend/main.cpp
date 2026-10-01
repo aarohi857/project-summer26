@@ -26,6 +26,12 @@ int main() {
 
     std::cout << "Task Scheduler Backend starting..." << std::endl;
 
+    // GET / - Root route to prevent 404 on base URL
+    CROW_ROUTE(app, "/")
+    ([]() {
+        return crow::response(200, "C++ Task Scheduler API is Live and Running!");
+    });
+
     // GET /tasks - Get sorted or unsorted pending tasks
     CROW_ROUTE(app, "/tasks")
     ([&manager](const crow::request& req) {
