@@ -1,6 +1,6 @@
 // app.js - Unified Frontend Controller for C++ Backend Task Scheduler
 
-const API_BASE = "http://localhost:18080";
+const API_BASE = "https://task-scheduler-backend-eefe.onrender.com";
 
 // Theme Management
 function initTheme() {
