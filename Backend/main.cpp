@@ -2,6 +2,7 @@
 #include "TaskManager.h"
 #include <iostream>
 #include <algorithm>
+#include <cstdlib>
 
 // Custom CORS Middleware to allow requests from the static HTML frontend
 struct CORS {
@@ -23,7 +24,7 @@ int main() {
     crow::App<CORS> app;
     TaskManager manager("tasks_db.json");
 
-    std::cout << "Task Scheduler Backend started on port 18080..." << std::endl;
+    std::cout << "Task Scheduler Backend starting..." << std::endl;
 
     // GET /tasks - Get sorted or unsorted pending tasks
     CROW_ROUTE(app, "/tasks")
@@ -49,7 +50,10 @@ int main() {
         } else {
             response = std::move(pendingJson);
         }
-        return crow::response(response);
+        
+        crow::response res(response.dump());
+        res.add_header("Content-Type", "application/json");
+        return res;
     });
 
     // GET /completedTasks - Get sorted or unsorted completed tasks
@@ -76,7 +80,10 @@ int main() {
         } else {
             response = std::move(completedJson);
         }
-        return crow::response(response);
+        
+        crow::response res(response.dump());
+        res.add_header("Content-Type", "application/json");
+        return res;
     });
 
     // POST /tasks - Create a new task
@@ -89,7 +96,10 @@ int main() {
 
         Task t = Task::from_json(bodyJson);
         Task created = manager.addTask(t);
-        return crow::response(201, created.to_json());
+        
+        crow::response res(201, created.to_json().dump());
+        res.add_header("Content-Type", "application/json");
+        return res;
     });
 
     // PUT /tasks/{id} - Update an existing task
@@ -118,19 +128,20 @@ int main() {
         return crow::response(404, "Task not found");
     });
 
-    // GET /search - Search tasks by ID (Binary Search) or Title/Name (Linear Search)
+    // GET /search - Search tasks by ID or Title
     CROW_ROUTE(app, "/search")
     ([&manager](const crow::request& req) {
         char* q = req.url_params.get("q");
         if (q == nullptr || std::string(q).empty()) {
             crow::json::wvalue emptyList = crow::json::wvalue::list();
-            return crow::response(emptyList);
+            crow::response res(emptyList.dump());
+            res.add_header("Content-Type", "application/json");
+            return res;
         }
 
         std::string queryStr(q);
         std::vector<Task> results;
 
-        // Try to parse query string as an ID (e.g. check if all characters are digits)
         bool isNumber = !queryStr.empty() && std::all_of(queryStr.begin(), queryStr.end(), ::isdigit);
         if (isNumber) {
             int id = std::stoi(queryStr);
@@ -154,29 +165,38 @@ int main() {
         } else {
             response = std::move(resultsJson);
         }
-        return crow::response(response);
+        
+        crow::response res(response.dump());
+        res.add_header("Content-Type", "application/json");
+        return res;
     });
 
     // GET /statistics - Get tasks breakdown metrics
     CROW_ROUTE(app, "/statistics")
     ([&manager]() {
-        return crow::response(manager.getStatistics());
+        crow::response res(manager.getStatistics().dump());
+        res.add_header("Content-Type", "application/json");
+        return res;
     });
 
-    // POST /executePriorityTask - Pop & complete the highest priority task using Priority Queue
+    // POST /executePriorityTask - Pop & complete highest priority task
     CROW_ROUTE(app, "/executePriorityTask").methods(crow::HTTPMethod::POST)
     ([&manager]() {
         bool success = false;
         Task t = manager.executeHighestPriorityTask(success);
         if (success) {
-            return crow::response(200, t.to_json());
+            crow::response res(200, t.to_json().dump());
+            res.add_header("Content-Type", "application/json");
+            return res;
         }
         crow::json::wvalue errResponse;
         errResponse["error"] = "No pending tasks available in the priority queue";
-        return crow::response(400, errResponse);
+        crow::response res(400, errResponse.dump());
+        res.add_header("Content-Type", "application/json");
+        return res;
     });
 
-    // POST /completeTask - Mark a task as completed manually
+    // POST /completeTask - Mark a task as completed
     CROW_ROUTE(app, "/completeTask").methods(crow::HTTPMethod::POST)
     ([&manager](const crow::request& req) {
         auto bodyJson = crow::json::load(req.body);
@@ -192,6 +212,8 @@ int main() {
         return crow::response(404, "Task not found");
     });
 
-    // Configure and run the application
-    app.port(18080).multithreaded().run();
+    // Render environment port assignment
+    char* portStr = std::getenv("PORT");
+    int port = portStr ? std::stoi(portStr) : 18080;
+    app.port(port).multithreaded().run();
 }
