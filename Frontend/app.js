@@ -39,7 +39,6 @@ function showToast(message, type = "success") {
     const toast = document.createElement("div");
     toast.className = `toast-msg toast-${type}`;
     
-    // Icon based on type
     const icon = type === "success" 
         ? `<svg viewBox="0 0 24 24" width="20" height="20" stroke="#10b981" stroke-width="2.5" fill="none"><polyline points="20 6 9 17 4 12"></polyline></svg>`
         : `<svg viewBox="0 0 24 24" width="20" height="20" stroke="#ef4444" stroke-width="2.5" fill="none"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>`;
@@ -56,7 +55,6 @@ function showToast(message, type = "success") {
 
     container.appendChild(toast);
 
-    // Auto dismiss after 3500ms
     setTimeout(() => {
         toast.classList.add("toast-out");
         toast.addEventListener("animationend", () => {
@@ -69,7 +67,6 @@ function showToast(message, type = "success") {
 function setupDialogDismissFallback(dialog) {
     if (!dialog) return;
     
-    // Check if browser natively supports closedby
     if (!('closedBy' in HTMLDialogElement.prototype)) {
         dialog.addEventListener('click', (event) => {
             if (event.target !== dialog) return;
@@ -96,13 +93,10 @@ async function fetchStatistics() {
         if (!res.ok) throw new Error("Failed to load statistics");
         const stats = await res.json();
         
-        // Update Stats UI if elements exist
         updateMetricElement("stat-total", stats.total);
         updateMetricElement("stat-pending", stats.pending);
         updateMetricElement("stat-completed", stats.completed);
         updateMetricElement("stat-high", stats.high);
-
-        // Sidebar stats
         updateMetricElement("sidebar-pending-count", stats.pending);
 
         return stats;
@@ -135,14 +129,12 @@ async function executeHighestPriorityTask() {
 
         const task = await res.json();
 
-        // Trigger Success Checkmark Overlay Animation
         const overlay = document.getElementById("success-overlay");
         const taskTitleEl = document.getElementById("executed-task-title");
         if (overlay && taskTitleEl) {
             taskTitleEl.textContent = task.title;
             overlay.classList.add("active");
 
-            // Play checkmark animation, dismiss overlay after 2 seconds
             setTimeout(() => {
                 overlay.classList.remove("active");
                 refreshPageData();
@@ -213,7 +205,6 @@ async function executeDelete(id) {
 function refreshPageData() {
     fetchStatistics();
     
-    // Check which page is currently open and trigger its loader
     const path = window.location.pathname;
     if (path.includes("tasks.html")) {
         loadTasksTab();
@@ -222,7 +213,6 @@ function refreshPageData() {
     } else if (path.includes("statistics.html")) {
         loadStatisticsTab();
     } else {
-        // Home dashboard
         loadDashboardTab();
     }
 }
@@ -304,7 +294,6 @@ async function loadTasksTab(searchQuery = "") {
             ? `${API_BASE}/search?q=${encodeURIComponent(searchQuery)}`
             : `${API_BASE}/tasks`;
         
-        // Add sorting params if sorting is active
         if (!searchQuery && activeSort) {
             url += `?sortBy=${activeSort}`;
         }
@@ -313,7 +302,6 @@ async function loadTasksTab(searchQuery = "") {
         if (!res.ok) throw new Error("Failed to load tasks");
         let tasks = await res.json();
 
-        // If performing search, C++ search returns all hits. We only display pending tasks on this view.
         if (searchQuery) {
             tasks = tasks.filter(t => t.status === "Pending");
         }
@@ -487,7 +475,6 @@ async function loadStatisticsTab() {
     const canvasPriority = document.getElementById("priorityChart");
     if (!canvasStatus || !canvasPriority) return;
 
-    // Load Chart.js dynamically from CDN if not already loaded, then draw
     if (typeof Chart === 'undefined') {
         const script = document.createElement('script');
         script.src = 'https://cdn.jsdelivr.net/npm/chart.js';
@@ -508,11 +495,9 @@ async function drawCharts() {
     const textColour = isDark ? "#94a3b8" : "#475569";
     const borderColour = isDark ? "rgba(255, 255, 255, 0.08)" : "rgba(15, 23, 42, 0.08)";
 
-    // Destroy existing charts to reload clean transitions
     if (statusChart) statusChart.destroy();
     if (priorityChart) priorityChart.destroy();
 
-    // 1. Status Chart (Doughnut)
     const ctxStatus = document.getElementById("statusChart").getContext("2d");
     statusChart = new Chart(ctxStatus, {
         type: 'doughnut',
@@ -521,8 +506,8 @@ async function drawCharts() {
             datasets: [{
                 data: [stats.pending, stats.completed],
                 backgroundColor: [
-                    'rgba(245, 158, 11, 0.75)', // Pending Amber
-                    'rgba(16, 185, 129, 0.75)'  // Completed Emerald
+                    'rgba(245, 158, 11, 0.75)',
+                    'rgba(16, 185, 129, 0.75)'
                 ],
                 borderColor: isDark ? '#111827' : '#ffffff',
                 borderWidth: 2
@@ -540,7 +525,6 @@ async function drawCharts() {
         }
     });
 
-    // 2. Priority Chart (Bar)
     const ctxPriority = document.getElementById("priorityChart").getContext("2d");
     priorityChart = new Chart(ctxPriority, {
         type: 'bar',
@@ -550,9 +534,9 @@ async function drawCharts() {
                 label: 'Tasks Count',
                 data: [stats.high, stats.medium, stats.low],
                 backgroundColor: [
-                    'rgba(244, 63, 94, 0.75)',  // High priority - Rose
-                    'rgba(251, 191, 36, 0.75)', // Medium priority - Amber
-                    'rgba(52, 211, 153, 0.75)'  // Low priority - Emerald
+                    'rgba(244, 63, 94, 0.75)',
+                    'rgba(251, 191, 36, 0.75)',
+                    'rgba(52, 211, 153, 0.75)'
                 ],
                 borderWidth: 0,
                 borderRadius: 4
@@ -597,24 +581,21 @@ function escapeHTML(str) {
     );
 }
 
-// Bootstrapping the page layout on DOM Content Loaded
+// Bootstrapping page layout on DOM Loaded
 document.addEventListener("DOMContentLoaded", () => {
     initTheme();
     fetchStatistics();
 
-    // Check currently loaded page
     const path = window.location.pathname;
     if (path.includes("tasks.html")) {
         loadTasksTab();
         
-        // Form bindings
         const addForm = document.getElementById("add-task-form");
         if (addForm) addForm.addEventListener("submit", handleAddTask);
 
         const editForm = document.getElementById("edit-task-form");
         if (editForm) editForm.addEventListener("submit", handleEditTask);
 
-        // Modal triggers
         const addBtn = document.getElementById("open-add-dialog-btn");
         const addDialog = document.getElementById("add-task-dialog");
         if (addBtn && addDialog) {
@@ -627,7 +608,6 @@ document.addEventListener("DOMContentLoaded", () => {
             setupDialogDismissFallback(editDialog);
         }
 
-        // Sorting binding
         const sortSelect = document.getElementById("sort-by-select");
         if (sortSelect) {
             sortSelect.addEventListener("change", (e) => handleSortChange(e.target.value));
@@ -638,19 +618,16 @@ document.addEventListener("DOMContentLoaded", () => {
     } else if (path.includes("statistics.html")) {
         loadStatisticsTab();
     } else if (path.includes("about.html")) {
-        // About page needs no complex dynamic state loading other than sidebar counters
+        // About page
     } else {
-        // Home dashboard
         loadDashboardTab();
 
-        // Priority task execute button binding
         const execBtn = document.getElementById("execute-priority-btn");
         if (execBtn) {
             execBtn.addEventListener("click", executeHighestPriorityTask);
         }
     }
 
-    // Global Search bindings (present in sidebar navbar area on all files)
     const searchInput = document.getElementById("global-search-input");
     if (searchInput) {
         let debounceTimer;
@@ -659,7 +636,6 @@ document.addEventListener("DOMContentLoaded", () => {
             const query = e.target.value.trim();
 
             debounceTimer = setTimeout(() => {
-                // If we are not on the tasks page, redirect to tasks page with search parameter
                 if (!window.location.pathname.includes("tasks.html")) {
                     window.location.href = `tasks.html?search=${encodeURIComponent(query)}`;
                 } else {
@@ -668,17 +644,14 @@ document.addEventListener("DOMContentLoaded", () => {
             }, 300);
         });
 
-        // Handle search query parameter when loaded via redirect
         const urlParams = new URLSearchParams(window.location.search);
         const searchParam = urlParams.get("search");
         if (searchParam && window.location.pathname.includes("tasks.html")) {
             searchInput.value = searchParam;
             loadTasksTab(searchParam);
-            // Clean up the URL parameter
             window.history.replaceState({}, document.title, window.location.pathname);
         }
 
-        // Custom Delete dialog bindings
         const deleteDialog = document.getElementById("delete-confirm-dialog");
         const confirmDeleteBtn = document.getElementById("confirm-delete-btn");
         if (deleteDialog) {
